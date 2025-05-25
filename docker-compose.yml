@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - broker-kafka
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - broker-kafka
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: kafkadb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - broker-kafka
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    ports:
+      - 8081:80
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      PMA_HOST: mysql
+      PMA_USER: user
+      PMA_PASSWORD: password
+    depends_on:
+      - mysql
+    networks:
+      - broker-kafka
+
+  publisher:
+    container_name: publisher
+    build:
+      context: ./publisher
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    restart: "always"
+    depends_on:
+      - zookeeper
+      - kafka
+      - mysql
+    volumes:
+      - ./publisher:/publisher
+    networks:
+      - broker-kafka
+
+  consumer:
+    container_name: consumer
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    restart: "always"
+    depends_on:
+      - zookeeper
+      - kafka
+      - mysql
+      - publisher
+    networks:
+      - broker-kafka
+
+volumes:
+  mysql_data:
+
+networks:
+  broker-kafka:
+    driver: bridge
