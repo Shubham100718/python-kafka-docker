@@ -65,7 +65,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    restart: "always"
+    restart: "on-failure"
     depends_on:
       - zookeeper
       - kafka
@@ -80,7 +80,7 @@ services:
     build:
       context: ./consumer
       dockerfile: Dockerfile
-    restart: "always"
+    restart: "on-failure"
     depends_on:
       - zookeeper
       - kafka
