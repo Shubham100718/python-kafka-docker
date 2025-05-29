@@ -70,8 +70,6 @@ services:
       - zookeeper
       - kafka
       - mysql
-    volumes:
-      - ./publisher:/publisher
     networks:
       - broker-kafka
 
